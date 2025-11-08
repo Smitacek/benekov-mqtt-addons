@@ -18,5 +18,5 @@ export MQTT_PASS="$(bashio::config 'mqtt.password')"
 pages="$(bashio::config 'include_pages' | jq -r '.[]' | tr '\n' ' ')"
 export INCLUDE_PAGES="$pages"
 
+cd /app
 exec python3 -m benekov_mqtt
-
