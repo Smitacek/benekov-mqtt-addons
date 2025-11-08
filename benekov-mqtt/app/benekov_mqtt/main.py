@@ -139,6 +139,34 @@ class BenekovMQTT:
                             ent['unit'] = meta['unit']
                     filtered.append(ent)
                 pg['entries'] = filtered
+                # Ensure mandatory monitor entries for home page even if not parsed
+                if self.read_only and p == "HMI00001.cgi":
+                    need = [
+                        ("o044", {"label": "Aktuální výkon", "unit": "%", "it": "v"}),
+                        ("o075", {"label": "B2 Teplota kotle", "unit": "°C", "it": "v"}),
+                        ("o082", {"label": "B7 Teplota zpátečky", "unit": "°C", "it": "v"}),
+                        ("o089", {"label": "B8 Teplota spalin", "unit": "°C", "it": "v"}),
+                        ("o038", {"label": "Stav kotle", "it": "e", "enum_lg": "2. 512"}),
+                        ("o148", {"label": "Palivo", "it": "e"}),
+                    ]
+                    present_ids = {e['id'] for e in pg['entries']}
+                    for oid, meta in need:
+                        if oid in present_ids:
+                            continue
+                        ent = {
+                            'page': p,
+                            'id': oid,
+                            'label': meta.get('label', oid),
+                            'unit': meta.get('unit'),
+                            'it': meta.get('it', 'v'),
+                            'mi': None,
+                            'enum': None,
+                        }
+                        # Attach enum from languages if requested
+                        lgk = meta.get('enum_lg')
+                        if lgk and lgk in self.languages:
+                            ent['enum'] = self.languages[lgk]
+                        pg['entries'].append(ent)
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
                 # If still no entries but read endpoint has ids, generate generic entries
