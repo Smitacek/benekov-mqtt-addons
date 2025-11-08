@@ -17,37 +17,59 @@ def get_env(name: str, default: str = "") -> str:
     return default if v in (None, "", "null", "None") else v
 
 
+def _load_options_json():
+    try:
+        with open('/data/options.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 class BenekovMQTT:
     def __init__(self):
-        self.base_url = get_env("HMI_BASE_URL")
-        self.username = get_env("HMI_USER")
-        self.password = get_env("HMI_PASS")
-        self.poll_interval = int(get_env("POLL_INTERVAL", "30"))
+        opts = _load_options_json() or {}
+
+        def opt(path, default=""):
+            cur = opts
+            for part in path.split('.'):
+                if isinstance(cur, dict) and part in cur:
+                    cur = cur[part]
+                else:
+                    return default
+            return cur
+
+        self.base_url = str(opt('device_host', get_env("HMI_BASE_URL", "")))
+        self.username = str(opt('username', get_env("HMI_USER", "")))
+        self.password = str(opt('password', get_env("HMI_PASS", "")))
+        self.poll_interval = int(opt('poll_interval', get_env("POLL_INTERVAL", "30") or 30))
         if self.poll_interval < 30:
             self.poll_interval = 30
-        self.discovery_prefix = get_env("DISCOVERY_PREFIX", "homeassistant")
-        self.base_topic = get_env("BASE_TOPIC", "benekov")
-        # include pages space separated
-        self.include_pages: List[str] = [p for p in get_env("INCLUDE_PAGES", "").split(" ") if p]
-        # Sensible defaults if nothing (or only home) provided
+        self.discovery_prefix = str(opt('discovery_prefix', get_env("DISCOVERY_PREFIX", "homeassistant")))
+        self.base_topic = str(opt('base_topic', get_env("BASE_TOPIC", "benekov")))
+
+        # include_pages preferred from options.json (YAML list)
+        ip = opt('include_pages', None)
+        if isinstance(ip, list):
+            self.include_pages = [str(p) for p in ip if p]
+        else:
+            self.include_pages = [p for p in get_env("INCLUDE_PAGES", "").split(" ") if p]
         if not self.include_pages or self.include_pages == ["HMI00001.cgi"]:
             self.include_pages = [
-                "HMI00001.cgi",
                 "HMI00016.cgi",
                 "HMI00039.cgi",
                 "HMI00012.cgi",
-                "HMI00014.cgi",
-                "HMI00038.cgi",
                 "HMI00052.cgi",
+                "HMI00038.cgi",
                 "HMI00060.cgi",
                 "HMI00005.cgi",
                 "HMI00006.cgi",
+                "HMI00001.cgi",
             ]
 
-        self.mqtt_host = get_env("MQTT_HOST", "core-mosquitto")
-        self.mqtt_port = int(get_env("MQTT_PORT", "1883"))
-        self.mqtt_user = get_env("MQTT_USER", "")
-        self.mqtt_pass = get_env("MQTT_PASS", "")
+        self.mqtt_host = str(opt('mqtt.host', get_env("MQTT_HOST", "core-mosquitto")))
+        self.mqtt_port = int(opt('mqtt.port', get_env("MQTT_PORT", "1883") or 1883))
+        self.mqtt_user = str(opt('mqtt.username', get_env("MQTT_USER", "")))
+        self.mqtt_pass = str(opt('mqtt.password', get_env("MQTT_PASS", "")))
 
         if not self.base_url:
             print("HMI_BASE_URL not set", file=sys.stderr)
