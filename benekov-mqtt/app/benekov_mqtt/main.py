@@ -139,6 +139,12 @@ class BenekovMQTT:
                 pg['entries'] = filtered
                 # Ensure mandatory monitor entries for home page even if not parsed
                 if self.read_only and p == "HMI00001.cgi":
+                    # If parsed entry for Stav kotle exists but has no enum, attach from languages (lg 2. 512)
+                    for ent_fix in pg['entries']:
+                        if ent_fix.get('id') == 'o038' and not ent_fix.get('enum'):
+                            arr = self.languages.get('2.  512') or self.languages.get('2. 512')
+                            if isinstance(arr, list) and len(arr) > 0:
+                                ent_fix['enum'] = [s.strip() for s in str(arr[0]).split('*') if s.strip()]
                     need = [
                         ("o044", {"label": "Aktuální výkon", "unit": "%", "it": "v"}),
                         ("o075", {"label": "B2 Teplota kotle", "unit": "°C", "it": "v"}),
@@ -166,7 +172,7 @@ class BenekovMQTT:
                             arr = self.languages[lgk]
                             if isinstance(arr, list) and len(arr) > 0:
                                 ent['enum'] = [p.strip() for p in str(arr[0]).split('*') if p.strip()]
-                        pg['entries'].append(ent)
+                    pg['entries'].append(ent)
                     # Reorder so that 'Stav kotle' is first, then the rest
                     prio = {"o038": 0, "o044": 10, "o075": 20, "o082": 30, "o089": 40, "o148": 50}
                     pg['entries'].sort(key=lambda e: prio.get(e.get('id'), 1000))
