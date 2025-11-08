@@ -111,7 +111,15 @@ class BenekovMQTT:
                         filtered.append(ent)
                 pg['entries'] = filtered
                 self.pages[p] = pg
-                self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}")
+                self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
+                # If still no entries but read endpoint has ids, generate generic entries
+                if not pg['entries'] and idset:
+                    gen = []
+                    for oid in sorted(idset):
+                        gen.append({'page': p, 'id': oid, 'label': oid, 'unit': None, 'it': 'v', 'mi': None, 'enum': None})
+                    pg['entries'] = gen
+                    self.pages[p] = pg
+                    self.log(f"generated {len(gen)} generic entries for {p} from {pg['read']}")
             except Exception as e:
                 self.log(f"parse_page failed for {p}: {e}")
 

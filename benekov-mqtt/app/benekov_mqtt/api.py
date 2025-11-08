@@ -96,6 +96,7 @@ DIV_RE = re.compile(r"<div\s+id=['\"]d(\d+)['\"]>(.*?)</div>", re.S)
 TD_LABEL_RE = re.compile(r"<td[^>]*id=['\"]l(\d+)['\"][^>]*>(.*?)</td>", re.S)
 A_LINK_RE = re.compile(r"<a[^>]*id=['\"]a(\d+)['\"][^>]*href=\"([^\"]+)\"", re.S)
 SPAN_VAL_RE = re.compile(r"<span[^>]*id=\"(o\d+)\"([^>]*)>(.*?)</span>", re.S)
+SPAN_GLOBAL_RE = SPAN_VAL_RE
 
 
 def parse_page(client: HMIClient, languages: Dict[str, List[str]], page: str, lang_index: int = 0):
@@ -131,7 +132,13 @@ def parse_page(client: HMIClient, languages: Dict[str, List[str]], page: str, la
                 label_text = re.sub(r"\s+", " ", label_text)
 
         # value span and attributes
-        m_span = SPAN_VAL_RE.search(block)
+        # Find the first value span with an input type ('it') within the block
+        m_span = None
+        for m in SPAN_VAL_RE.finditer(block):
+            attrs_tmp = m.group(2)
+            if re.search(r"\bit=\"(v|e)\"", attrs_tmp):
+                m_span = m
+                break
         if not m_span:
             continue
         span_id = m_span.group(1)
@@ -162,11 +169,41 @@ def parse_page(client: HMIClient, languages: Dict[str, List[str]], page: str, la
             'unit': unit, 'enum': enum_options,
         })
 
+    # Fallback: if no entries found by div-block parsing, scan the whole HTML for value spans
+    if not entries:
+        units_map = {}
+        for mu in re.finditer(r"<span[^>]*id=\"u(\d+)\"[^>]*class=\"u\"[^>]*>(.*?)</span>", html, re.S):
+            units_map[mu.group(1)] = re.sub(r"<[^>]+>", " ", mu.group(2)).strip()
+        for m in SPAN_GLOBAL_RE.finditer(html):
+            span_id = m.group(1)  # e.g., o009
+            attrs = m.group(2)
+            # Only keep input/value spans having 'it="v"' or 'it="e"'
+            m_it = re.search(r"\bit=\"(v|e)\"", attrs)
+            if not m_it:
+                continue
+            it = m_it.group(1)
+            mi = None
+            m_mi = re.search(r"\bmi=\"([^\"]+)\"", attrs)
+            if m_mi:
+                mi = m_mi.group(1)
+            enum_def = None
+            m_e = re.search(r"\be=\"([^\"]+)\"", attrs)
+            if m_e:
+                enum_def = m_e.group(1)
+            enum_options = None
+            if enum_def:
+                enum_def = enum_def.replace("\r", " ").replace("\n", " ")
+                enum_options = [p.strip() for p in enum_def.split('*') if p.strip()]
+            num = span_id[1:]
+            unit = units_map.get(num)
+            entries.append({'n': -1, 'id': span_id, 'label': '', 'it': it, 'mi': mi, 'unit': unit, 'enum': enum_options})
+
     return {
         'page': page,
         'title': title_text,
         'read': read_ep,
         'entries': entries,
+        'html_len': len(html),
     }
 
 
