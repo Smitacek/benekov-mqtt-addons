@@ -1,5 +1,5 @@
 name: Benekov MQTT Bridge
-version: 0.2.4
+version: 0.2.5
 slug: benekov_mqtt
 description: "Benekov/Climatix HMI → MQTT bridge with HA discovery"
 url: "https://github.com/Smitacek/benekov-mqtt-addons/tree/main/benekov-mqtt"

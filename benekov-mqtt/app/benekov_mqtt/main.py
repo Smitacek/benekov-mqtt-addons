@@ -137,25 +137,19 @@ class BenekovMQTT:
                             ent['unit'] = meta['unit']
                     filtered.append(ent)
                 pg['entries'] = filtered
-                # Ensure mandatory monitor entries for home page even if not parsed
+                # In monitor profile, build home metrics directly from Read.cgi id set to avoid brittle HTML
                 if self.read_only and p == "HMI00001.cgi":
-                    # If parsed entry for Stav kotle exists but has no enum, attach from languages (lg 2. 512)
-                    for ent_fix in pg['entries']:
-                        if ent_fix.get('id') == 'o038' and not ent_fix.get('enum'):
-                            arr = self.languages.get('2.  512') or self.languages.get('2. 512')
-                            if isinstance(arr, list) and len(arr) > 0:
-                                ent_fix['enum'] = [s.strip() for s in str(arr[0]).split('*') if s.strip()]
-                    need = [
+                    wanted = [
+                        ("o038", {"label": "Stav kotle", "it": "e", "enum_lg": "2. 512"}),
                         ("o044", {"label": "Aktuální výkon", "unit": "%", "it": "v"}),
                         ("o075", {"label": "B2 Teplota kotle", "unit": "°C", "it": "v"}),
                         ("o082", {"label": "B7 Teplota zpátečky", "unit": "°C", "it": "v"}),
                         ("o089", {"label": "B8 Teplota spalin", "unit": "°C", "it": "v"}),
-                        ("o038", {"label": "Stav kotle", "it": "e", "enum_lg": "2. 512"}),
                         ("o148", {"label": "Palivo", "it": "e"}),
                     ]
-                    present_ids = {e['id'] for e in pg['entries']}
-                    for oid, meta in need:
-                        if oid in present_ids:
+                    forced = []
+                    for oid, meta in wanted:
+                        if oid not in idset:
                             continue
                         ent = {
                             'page': p,
@@ -166,16 +160,14 @@ class BenekovMQTT:
                             'mi': None,
                             'enum': None,
                         }
-                        # Attach enum from languages if requested
                         lgk = meta.get('enum_lg')
-                        if lgk and lgk in self.languages:
-                            arr = self.languages[lgk]
+                        if lgk:
+                            arr = self.languages.get(lgk) or self.languages.get(lgk.replace('  ', ' '))
                             if isinstance(arr, list) and len(arr) > 0:
-                                ent['enum'] = [p.strip() for p in str(arr[0]).split('*') if p.strip()]
-                    pg['entries'].append(ent)
-                    # Reorder so that 'Stav kotle' is first, then the rest
-                    prio = {"o038": 0, "o044": 10, "o075": 20, "o082": 30, "o089": 40, "o148": 50}
-                    pg['entries'].sort(key=lambda e: prio.get(e.get('id'), 1000))
+                                ent['enum'] = [s.strip() for s in str(arr[0]).split('*') if s.strip()]
+                        forced.append(ent)
+                    if forced:
+                        pg['entries'] = forced
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
                 # If still no entries but read endpoint has ids, generate generic entries
