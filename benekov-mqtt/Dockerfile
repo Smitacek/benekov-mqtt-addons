@@ -3,7 +3,7 @@ FROM ${BUILD_FROM}
 
 # Install Python and dependencies
 RUN apk add --no-cache python3 py3-pip && \
-    pip3 --no-cache-dir install requests paho-mqtt beautifulsoup4 lxml
+    pip3 --no-cache-dir install requests paho-mqtt
 
 # Copy service files
 COPY rootfs /
@@ -12,4 +12,3 @@ COPY rootfs /
 COPY app /app
 
 ENV PYTHONUNBUFFERED=1
-
