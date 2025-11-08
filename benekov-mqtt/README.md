@@ -46,6 +46,39 @@ mqtt:
 - Keep polling reasonable (>= 30s) to avoid stressing the embedded HMI.
 - Only items with `mi` are published as writable (number/select). Writes map select payloads either by index or by exact label.
 
+## Mapping "Stav kotle" (optional template)
+
+Some controllers expose the boiler state as a numeric index on the home page (HMI00001/o038). If you prefer a template‑based mapping in Home Assistant, add the following to your `configuration.yaml` (adjust the source entity_id to match your setup):
+
+```yaml
+template:
+  - sensor:
+      - name: "Benekov – Stav kotle (text)"
+        state: >
+          {% set idx = states('sensor.benekov_stav_kotle')|int(0) %}
+          {% set opts = [
+            'Mimo provoz',
+            'Provětrání',
+            'Provoz',
+            'Plnění',
+            'Kal.O2',
+            'Externí Vyp',
+            'Vyprázdnění',
+            'Útlum od teploty',
+            'Zapalování',
+            '?',
+            '?',
+            'Externí útlum',
+            'Odstaven',
+            'Zahoření',
+            '?',
+            'Vyprázdnění'
+          ] %}
+          {{ opts[idx] if 0 <= idx < opts|length else 'Neznámý' }}
+```
+
+Index → text mapping above is derived from the controller language table (lg "2. 512"). You can adjust labels to your preference.
+
 ## Local build (dev)
 ```
 docker build -t benekov-mqtt addon/benekov-mqtt
