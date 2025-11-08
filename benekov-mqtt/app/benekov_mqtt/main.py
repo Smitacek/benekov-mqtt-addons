@@ -175,9 +175,19 @@ class BenekovMQTT:
                     self.log(f"no value for {ent['id']} on {read_ep}")
                     continue
                 typ, val = typval
-                # Publish raw state; HA templates/entities handle types
+                # Map enums to text option if available
+                state_payload = val
+                if ent.get('it') == 'e' and ent.get('enum'):
+                    try:
+                        idx = int(val)
+                        opts = ent['enum']
+                        if 0 <= idx < len(opts):
+                            state_payload = opts[idx]
+                    except Exception:
+                        pass
+                # Publish state
                 t = topics(self.base_topic, self.base_url, ent['page'], ent['id'])
-                self.mqtt.publish(t['state'], val, retain=True)
+                self.mqtt.publish(t['state'], state_payload, retain=True)
                 # Attributes
                 attrs = {
                     'page': ent['page'],
@@ -187,6 +197,11 @@ class BenekovMQTT:
                 }
                 if ent.get('enum'):
                     attrs['options'] = ent['enum']
+                    # Keep numeric index alongside, if numeric
+                    try:
+                        attrs['index'] = int(val)
+                    except Exception:
+                        pass
                 self.mqtt.publish(t['attr'], json.dumps(attrs), retain=True)
 
     def on_message(self, client, userdata, msg):
