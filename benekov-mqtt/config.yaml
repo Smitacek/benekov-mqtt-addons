@@ -7,6 +7,8 @@ arch:
   - amd64
   - armv7
   - aarch64
+  - armhf
+image: ghcr.io/Smitacek/benekov-mqtt-{arch}
 init: false
 startup: services
 boot: auto
