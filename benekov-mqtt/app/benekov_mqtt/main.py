@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import paho.mqtt.client as mqtt
 
-from .api import HMIClient, build_languages, parse_page, read_values, write_value
+from .api import HMIClient, build_languages, parse_page, read_values, read_ids, write_value
 from .discovery import sensor_config, number_config, select_config, topics, slugify
 
 
@@ -64,7 +64,18 @@ class BenekovMQTT:
         for p in pages:
             try:
                 pg = parse_page(self.client, self.languages, p)
+                # Filter entries to only those that appear in Read.cgi or are explicit writable
+                try:
+                    idset = read_ids(self.client, pg['read'])
+                except Exception:
+                    idset = set()
+                filtered = []
+                for ent in pg['entries']:
+                    if ent['id'] in idset or ent.get('it') in ('v', 'e'):
+                        filtered.append(ent)
+                pg['entries'] = filtered
                 self.pages[p] = pg
+                self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}")
             except Exception as e:
                 self.log(f"parse_page failed for {p}: {e}")
 
@@ -116,6 +127,8 @@ class BenekovMQTT:
             for ent in ents:
                 typval = vals.get(ent['id'])
                 if not typval:
+                    # Keep trying next loop, but log once per cycle for visibility
+                    self.log(f"no value for {ent['id']} on {read_ep}")
                     continue
                 typ, val = typval
                 # Publish raw state; HA templates/entities handle types

@@ -193,6 +193,15 @@ def read_values(client: HMIClient, read_endpoint: str) -> Dict[str, Tuple[str, s
     return out
 
 
+def read_ids(client: HMIClient, read_endpoint: str):
+    """Return a set of available object ids from a Read.cgi endpoint."""
+    text = client.fetch(read_endpoint)
+    ids = set()
+    for m in re.finditer(r"\b(o\d+),", text):
+        ids.add(m.group(1))
+    return ids
+
+
 def write_value(client: HMIClient, mi: str, value: str) -> bool:
     """Best-effort write via HMIinput.cgi.
     mi is the raw name like 'val:0x2302 0x4E25516C 0x100'.
@@ -206,4 +215,3 @@ def write_value(client: HMIClient, mi: str, value: str) -> bool:
         return True
     except Exception:
         return False
-
