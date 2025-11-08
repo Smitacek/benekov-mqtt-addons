@@ -1,0 +1,50 @@
+name: Benekov MQTT Bridge
+version: 0.1.0
+slug: benekov_mqtt
+description: "Benekov/Climatix HMI → MQTT bridge with HA discovery"
+url: "https://github.com/Smitacek/benekov-mqtt-addons/tree/main/benekov-mqtt"
+arch:
+  - amd64
+  - armv7
+  - aarch64
+init: false
+startup: services
+boot: auto
+host_network: true
+ingress: false
+map:
+  - config:rw
+schema:
+  device_host: url
+  username: str
+  password: password
+  poll_interval: int(30,)
+  discovery_prefix: str?
+  base_topic: str?
+  include_pages:
+    - str
+  mqtt:
+    host: str
+    port: int(1,65535)
+    username: str?
+    password: password?
+options:
+  device_host: "http://192.168.50.94/"
+  username: WEB
+  password: "SBTAdmin!"
+  poll_interval: 30
+  discovery_prefix: homeassistant
+  base_topic: benekov
+  include_pages:
+    - HMI00001.cgi
+    - HMI00016.cgi
+    - HMI00039.cgi
+    - HMI00012.cgi
+    - HMI00014.cgi
+    - HMI00038.cgi
+    - HMI00052.cgi
+  mqtt:
+    host: core-mosquitto
+    port: 1883
+    username: null
+    password: null

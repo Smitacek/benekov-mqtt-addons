@@ -1,0 +1,22 @@
+#!/command/with-contenv bashio
+
+set -euo pipefail
+
+export HMI_BASE_URL="$(bashio::config 'device_host')"
+export HMI_USER="$(bashio::config 'username')"
+export HMI_PASS="$(bashio::config 'password')"
+export POLL_INTERVAL="$(bashio::config 'poll_interval')"
+export DISCOVERY_PREFIX="$(bashio::config 'discovery_prefix')"
+export BASE_TOPIC="$(bashio::config 'base_topic')"
+
+export MQTT_HOST="$(bashio::config 'mqtt.host')"
+export MQTT_PORT="$(bashio::config 'mqtt.port')"
+export MQTT_USER="$(bashio::config 'mqtt.username')"
+export MQTT_PASS="$(bashio::config 'mqtt.password')"
+
+# Include pages (space-separated)
+pages="$(bashio::config 'include_pages' | jq -r '.[]' | tr '\n' ' ')"
+export INCLUDE_PAGES="$pages"
+
+exec python3 -m benekov_mqtt
+
