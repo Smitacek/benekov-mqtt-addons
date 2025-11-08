@@ -163,6 +163,13 @@ def parse_page(client: HMIClient, languages: Dict[str, List[str]], page: str, la
             # Enum def can be multiline with * separators
             enum_def = enum_def.replace("\r", " ").replace("\n", " ")
             enum_options = [p.strip() for p in enum_def.split('*') if p.strip()]
+        else:
+            # Some enums are provided via language key on value span
+            lg_key = get_attr('lg')
+            if lg_key:
+                arr = languages.get(lg_key)
+                if isinstance(arr, list) and len(arr) > 1:
+                    enum_options = arr
 
         entries.append({
             'n': int(n), 'id': span_id, 'label': label_text, 'it': it, 'mi': mi,

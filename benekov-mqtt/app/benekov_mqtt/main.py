@@ -85,7 +85,6 @@ class BenekovMQTT:
             # HMI00033 (podávání/ventilátor)
             ("HMI00033.cgi", "o010"): {"label": "Čas podávání", "unit": "s"},
             ("HMI00033.cgi", "o020"): {"label": "Výkon ventilátoru", "unit": "%"},
-            ("HMI00033.cgi", "o027"): {"label": "Doběh ventilátoru", "unit": "s"},
         }
 
         if not self.base_url:
