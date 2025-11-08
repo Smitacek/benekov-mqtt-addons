@@ -33,6 +33,9 @@ jobs:
       - name: Read version from config.yaml
         run: echo "VERSION=$(grep -m1 '^version:' ./benekov-mqtt/config.yaml | awk '{print $2}')" >> $GITHUB_ENV
 
+      - name: Lowercase owner for GHCR
+        run: echo "OWNER_LC=$(echo \"${GITHUB_REPOSITORY_OWNER}\" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -54,7 +57,7 @@ jobs:
           push: true
           platforms: ${{ matrix.platform }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.ADDON_SLUG }}-${{ matrix.arch }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.ADDON_SLUG }}-${{ matrix.arch }}:latest
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.ADDON_SLUG }}-${{ matrix.arch }}:${{ env.VERSION }}
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.ADDON_SLUG }}-${{ matrix.arch }}:latest
           build-args: |
             BUILD_FROM=ghcr.io/hassio-addons/base:14.1.0
