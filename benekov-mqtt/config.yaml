@@ -1,5 +1,5 @@
 name: Benekov MQTT Bridge
-version: 0.1.0
+version: 0.1.1
 slug: benekov_mqtt
 description: "Benekov/Climatix HMI → MQTT bridge with HA discovery"
 url: "https://github.com/Smitacek/benekov-mqtt-addons/tree/main/benekov-mqtt"
@@ -8,7 +8,6 @@ arch:
   - armv7
   - aarch64
   - armhf
-image: ghcr.io/smitacek/benekov-mqtt-{arch}
 init: false
 startup: services
 boot: auto
