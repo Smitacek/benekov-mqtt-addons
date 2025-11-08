@@ -137,7 +137,7 @@ class BenekovMQTT:
                             ent['unit'] = meta['unit']
                     filtered.append(ent)
                 pg['entries'] = filtered
-                # In monitor profile, build home metrics directly from Read.cgi id set to avoid brittle HTML
+                # In monitor profile, build home metrics directly (fixed order)
                 if self.read_only and p == "HMI00001.cgi":
                     wanted = [
                         ("o038", {"label": "Stav kotle", "it": "e", "enum_lg": "2. 512"}),
@@ -147,10 +147,10 @@ class BenekovMQTT:
                         ("o089", {"label": "B8 Teplota spalin", "unit": "°C", "it": "v"}),
                         ("o148", {"label": "Palivo", "it": "e"}),
                     ]
+                    # Keep enums/units from parsed entries when available
+                    existing = {e['id']: e for e in pg['entries']}
                     forced = []
                     for oid, meta in wanted:
-                        if oid not in idset:
-                            continue
                         ent = {
                             'page': p,
                             'id': oid,
@@ -160,14 +160,21 @@ class BenekovMQTT:
                             'mi': None,
                             'enum': None,
                         }
-                        lgk = meta.get('enum_lg')
-                        if lgk:
-                            arr = self.languages.get(lgk) or self.languages.get(lgk.replace('  ', ' '))
-                            if isinstance(arr, list) and len(arr) > 0:
-                                ent['enum'] = [s.strip() for s in str(arr[0]).split('*') if s.strip()]
+                        # Prefer enum from parsed HTML (e.g., Palivo)
+                        ex = existing.get(oid)
+                        if ex and ex.get('enum'):
+                            ent['enum'] = ex['enum']
+                            if not ent['unit'] and ex.get('unit'):
+                                ent['unit'] = ex['unit']
+                        else:
+                            # For Stav kotle attach enum from languages
+                            lgk = meta.get('enum_lg')
+                            if lgk:
+                                arr = self.languages.get(lgk) or self.languages.get(lgk.replace('  ', ' '))
+                                if isinstance(arr, list) and len(arr) > 0:
+                                    ent['enum'] = [s.strip() for s in str(arr[0]).split('*') if s.strip()]
                         forced.append(ent)
-                    if forced:
-                        pg['entries'] = forced
+                    pg['entries'] = forced
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
                 # If still no entries but read endpoint has ids, generate generic entries
