@@ -82,8 +82,7 @@ class BenekovMQTT:
             ("HMI65000.cgi", "o011"): {"label": "Alarmy aktivní"},
             ("HMI65000.cgi", "o018"): {"label": "Alarmy historie"},
             ("HMI65000.cgi", "o025"): {"label": "Alarm ID"},
-            # HMI00033 (podávání/ventilátor)
-            ("HMI00033.cgi", "o010"): {"label": "Čas podávání", "unit": "s"},
+            # HMI00033 (ventilátor)
             ("HMI00033.cgi", "o020"): {"label": "Výkon ventilátoru", "unit": "%"},
         }
 
@@ -165,7 +164,9 @@ class BenekovMQTT:
                         # Attach enum from languages if requested
                         lgk = meta.get('enum_lg')
                         if lgk and lgk in self.languages:
-                            ent['enum'] = self.languages[lgk]
+                            arr = self.languages[lgk]
+                            if isinstance(arr, list) and len(arr) > 0:
+                                ent['enum'] = [p.strip() for p in str(arr[0]).split('*') if p.strip()]
                         pg['entries'].append(ent)
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")

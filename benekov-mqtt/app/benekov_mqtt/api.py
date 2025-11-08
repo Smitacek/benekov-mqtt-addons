@@ -168,8 +168,9 @@ def parse_page(client: HMIClient, languages: Dict[str, List[str]], page: str, la
             lg_key = get_attr('lg')
             if lg_key:
                 arr = languages.get(lg_key)
-                if isinstance(arr, list) and len(arr) > 1:
-                    enum_options = arr
+                # languages[lg_key] is list of localized strings; take current language string and split by '*'
+                if isinstance(arr, list) and len(arr) > lang_index:
+                    enum_options = [p.strip() for p in str(arr[lang_index]).split('*') if p.strip()]
 
         entries.append({
             'n': int(n), 'id': span_id, 'label': label_text, 'it': it, 'mi': mi,
