@@ -14,9 +14,14 @@ export MQTT_PORT="$(bashio::config 'mqtt.port')"
 export MQTT_USER="$(bashio::config 'mqtt.username')"
 export MQTT_PASS="$(bashio::config 'mqtt.password')"
 
-# Include pages (space-separated)
-pages="$(bashio::config 'include_pages' | jq -r '.[]' | tr '\n' ' ')"
-export INCLUDE_PAGES="$pages"
+# Include pages (space-separated) without jq
+pages=""
+if bashio::config.has_value 'include_pages'; then
+  while read -r item; do
+    pages="${pages} ${item}"
+  done < <(bashio::config 'include_pages | .[]')
+fi
+export INCLUDE_PAGES="$(echo "${pages}" | xargs)"
 
 cd /app
 exec python3 -m benekov_mqtt
