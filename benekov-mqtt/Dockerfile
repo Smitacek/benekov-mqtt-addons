@@ -2,11 +2,13 @@ ARG BUILD_FROM=ghcr.io/hassio-addons/base:14.1.0
 FROM ${BUILD_FROM}
 
 # Install Python and dependencies
-RUN apk add --no-cache python3 py3-pip && \
+RUN apk add --no-cache python3 py3-pip jq && \
     pip3 --no-cache-dir install requests paho-mqtt
 
 # Copy service files
 COPY rootfs /
+# Ensure run scripts are executable
+RUN chmod -R +x /etc/services.d/benekov
 
 # Copy app
 COPY app /app
