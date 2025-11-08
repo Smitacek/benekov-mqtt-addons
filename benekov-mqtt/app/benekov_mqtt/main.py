@@ -82,8 +82,7 @@ class BenekovMQTT:
             ("HMI65000.cgi", "o011"): {"label": "Alarmy aktivní"},
             ("HMI65000.cgi", "o018"): {"label": "Alarmy historie"},
             ("HMI65000.cgi", "o025"): {"label": "Alarm ID"},
-            # HMI00033 (ventilátor)
-            ("HMI00033.cgi", "o020"): {"label": "Výkon ventilátoru", "unit": "%"},
+            # (ventilátor odstraněn z monitor profilu dle požadavku)
         }
 
         if not self.base_url:
@@ -168,6 +167,9 @@ class BenekovMQTT:
                             if isinstance(arr, list) and len(arr) > 0:
                                 ent['enum'] = [p.strip() for p in str(arr[0]).split('*') if p.strip()]
                         pg['entries'].append(ent)
+                    # Reorder so that 'Stav kotle' is first, then the rest
+                    prio = {"o038": 0, "o044": 10, "o075": 20, "o082": 30, "o089": 40, "o148": 50}
+                    pg['entries'].sort(key=lambda e: prio.get(e.get('id'), 1000))
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
                 # If still no entries but read endpoint has ids, generate generic entries

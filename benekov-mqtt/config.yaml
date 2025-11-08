@@ -1,5 +1,5 @@
 name: Benekov MQTT Bridge
-version: 0.2.2
+version: 0.2.3
 slug: benekov_mqtt
 description: "Benekov/Climatix HMI → MQTT bridge with HA discovery"
 url: "https://github.com/Smitacek/benekov-mqtt-addons/tree/main/benekov-mqtt"
@@ -41,7 +41,6 @@ options:
   include_pages:
     - HMI00001.cgi
     - HMI65000.cgi
-    - HMI00033.cgi
   mqtt:
     host: core-mosquitto
     port: 1883

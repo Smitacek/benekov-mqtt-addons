@@ -20,7 +20,6 @@ profile: monitor   # monitor|all; monitor = read-only + whitelist
 include_pages:
   - HMI00001.cgi    # výkon/teploty/palivo/stav
   - HMI65000.cgi    # alarmy
-  - HMI00033.cgi    # podávání/ventilátor
 mqtt:
   host: core-mosquitto
   port: 1883
@@ -32,7 +31,7 @@ mqtt:
 - Publikuje pouze provozní metriky (read-only):
   - Aktuální výkon (%), B2/B7/B8 teploty (°C), Stav kotle, Palivo
   - Alarmy (aktivní), Alarmy (historie), Alarm ID
-  - Čas podávání (s), Výkon ventilátoru (%), Doběh ventilátoru (s)
+  - (volitelně lze přidat další stránky, ale výchozí profil drží jen runtime metriky z Home + Alarmy)
 - Nezakládá ovládací `number/select` entity.
 
 ### All profile
