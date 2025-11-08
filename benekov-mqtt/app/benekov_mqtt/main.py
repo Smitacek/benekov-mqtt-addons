@@ -29,6 +29,20 @@ class BenekovMQTT:
         self.base_topic = get_env("BASE_TOPIC", "benekov")
         # include pages space separated
         self.include_pages: List[str] = [p for p in get_env("INCLUDE_PAGES", "").split(" ") if p]
+        # Sensible defaults if nothing (or only home) provided
+        if not self.include_pages or self.include_pages == ["HMI00001.cgi"]:
+            self.include_pages = [
+                "HMI00001.cgi",
+                "HMI00016.cgi",
+                "HMI00039.cgi",
+                "HMI00012.cgi",
+                "HMI00014.cgi",
+                "HMI00038.cgi",
+                "HMI00052.cgi",
+                "HMI00060.cgi",
+                "HMI00005.cgi",
+                "HMI00006.cgi",
+            ]
 
         self.mqtt_host = get_env("MQTT_HOST", "core-mosquitto")
         self.mqtt_port = int(get_env("MQTT_PORT", "1883"))
@@ -188,9 +202,12 @@ class BenekovMQTT:
     def run(self):
         self.connect_mqtt()
         self.build_pages()
+        self.log(f"building pages for {len(self.include_pages)} pages: {', '.join(self.include_pages)}")
         self.publish_discovery()
+        self.log("published discovery")
         # Initial state
         self.push_state()
+        self.log("initial state published")
 
         def loop():
             while self.running:
