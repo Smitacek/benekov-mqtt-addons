@@ -1,5 +1,5 @@
 name: Benekov MQTT Bridge
-version: 0.1.8
+version: 0.1.9
 slug: benekov_mqtt
 description: "Benekov/Climatix HMI → MQTT bridge with HA discovery"
 url: "https://github.com/Smitacek/benekov-mqtt-addons/tree/main/benekov-mqtt"
@@ -22,6 +22,7 @@ schema:
   poll_interval: int(30,)
   discovery_prefix: str?
   base_topic: str?
+  profile: str?
   include_pages:
     - str
   mqtt:
@@ -36,14 +37,11 @@ options:
   poll_interval: 30
   discovery_prefix: homeassistant
   base_topic: benekov
+  profile: monitor
   include_pages:
     - HMI00001.cgi
-    - HMI00016.cgi
-    - HMI00039.cgi
-    - HMI00012.cgi
-    - HMI00014.cgi
-    - HMI00038.cgi
-    - HMI00052.cgi
+    - HMI65000.cgi
+    - HMI00033.cgi
   mqtt:
     host: core-mosquitto
     port: 1883

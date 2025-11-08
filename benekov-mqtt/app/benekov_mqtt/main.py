@@ -54,22 +54,39 @@ class BenekovMQTT:
         else:
             self.include_pages = [p for p in get_env("INCLUDE_PAGES", "").split(" ") if p]
         if not self.include_pages or self.include_pages == ["HMI00001.cgi"]:
+            # Default monitoring pages
             self.include_pages = [
-                "HMI00016.cgi",
-                "HMI00039.cgi",
-                "HMI00012.cgi",
-                "HMI00052.cgi",
-                "HMI00038.cgi",
-                "HMI00060.cgi",
-                "HMI00005.cgi",
-                "HMI00006.cgi",
-                "HMI00001.cgi",
+                "HMI00001.cgi",   # home: výkon, teploty, palivo, stav
+                "HMI65000.cgi",   # alarmy
+                "HMI00033.cgi",   # podávání/ventilátor
             ]
 
         self.mqtt_host = str(opt('mqtt.host', get_env("MQTT_HOST", "core-mosquitto")))
         self.mqtt_port = int(opt('mqtt.port', get_env("MQTT_PORT", "1883") or 1883))
         self.mqtt_user = str(opt('mqtt.username', get_env("MQTT_USER", "")))
         self.mqtt_pass = str(opt('mqtt.password', get_env("MQTT_PASS", "")))
+
+        # Profile control: monitor (read-only, whitelist) vs all
+        self.profile = str(opt('profile', 'monitor')).lower() or 'monitor'
+        self.read_only = (self.profile != 'all')
+        # Whitelist for monitor profile with friendly names/units
+        self.monitor_whitelist = {
+            # HMI00001
+            ("HMI00001.cgi", "o044"): {"label": "Aktuální výkon", "unit": "%"},
+            ("HMI00001.cgi", "o075"): {"label": "B2 Teplota kotle", "unit": "°C"},
+            ("HMI00001.cgi", "o082"): {"label": "B7 Teplota zpátečky", "unit": "°C"},
+            ("HMI00001.cgi", "o089"): {"label": "B8 Teplota spalin", "unit": "°C"},
+            ("HMI00001.cgi", "o038"): {"label": "Stav kotle"},
+            ("HMI00001.cgi", "o148"): {"label": "Palivo"},
+            # HMI65000 (alarmy)
+            ("HMI65000.cgi", "o011"): {"label": "Alarmy aktivní"},
+            ("HMI65000.cgi", "o018"): {"label": "Alarmy historie"},
+            ("HMI65000.cgi", "o025"): {"label": "Alarm ID"},
+            # HMI00033 (podávání/ventilátor)
+            ("HMI00033.cgi", "o010"): {"label": "Čas podávání", "unit": "s"},
+            ("HMI00033.cgi", "o020"): {"label": "Výkon ventilátoru", "unit": "%"},
+            ("HMI00033.cgi", "o027"): {"label": "Doběh ventilátoru", "unit": "s"},
+        }
 
         if not self.base_url:
             print("HMI_BASE_URL not set", file=sys.stderr)
@@ -107,8 +124,21 @@ class BenekovMQTT:
                     idset = set()
                 filtered = []
                 for ent in pg['entries']:
-                    if ent['id'] in idset or ent.get('it') in ('v', 'e'):
-                        filtered.append(ent)
+                    ok = (ent['id'] in idset or ent.get('it') in ('v', 'e'))
+                    if not ok:
+                        continue
+                    # Apply monitor whitelist if enabled
+                    if self.read_only:
+                        key = (p, ent['id'])
+                        if key not in self.monitor_whitelist:
+                            continue
+                        # Override friendly label/unit if provided
+                        meta = self.monitor_whitelist[key]
+                        if meta.get('label'):
+                            ent['label'] = meta['label']
+                        if meta.get('unit'):
+                            ent['unit'] = meta['unit']
+                    filtered.append(ent)
                 pg['entries'] = filtered
                 self.pages[p] = pg
                 self.log(f"parsed {p}: {pg['title']!r}, entries={len(pg['entries'])}, read={pg['read']}, html_len={pg.get('html_len')}, read_ids={len(idset)}")
@@ -116,7 +146,15 @@ class BenekovMQTT:
                 if not pg['entries'] and idset:
                     gen = []
                     for oid in sorted(idset):
-                        gen.append({'page': p, 'id': oid, 'label': oid, 'unit': None, 'it': 'v', 'mi': None, 'enum': None})
+                        # Honor monitor whitelist if enabled
+                        if self.read_only:
+                            key = (p, oid)
+                            if key not in self.monitor_whitelist:
+                                continue
+                            meta = self.monitor_whitelist[key]
+                            gen.append({'page': p, 'id': oid, 'label': meta.get('label', oid), 'unit': meta.get('unit'), 'it': 'v', 'mi': None, 'enum': None})
+                        else:
+                            gen.append({'page': p, 'id': oid, 'label': oid, 'unit': None, 'it': 'v', 'mi': None, 'enum': None})
                     pg['entries'] = gen
                     self.pages[p] = pg
                     self.log(f"generated {len(gen)} generic entries for {p} from {pg['read']}")
@@ -138,7 +176,7 @@ class BenekovMQTT:
                 self.mqtt.publish(topic, json.dumps(payload), retain=True)
 
                 # If writable numeric -> number entity
-                if it == 'v' and mi:
+                if (it == 'v' and mi) and not self.read_only:
                     # Optional limits not parsed here; could be enhanced
                     t2, p2 = number_config(self.discovery_prefix, self.base_topic, self.base_url, page, ent['id'], label, unit, None, None, None)
                     self.mqtt.publish(t2, json.dumps(p2), retain=True)
@@ -146,7 +184,7 @@ class BenekovMQTT:
                     self.mqtt.subscribe(topics(self.base_topic, self.base_url, page, ent['id'])["command"])
 
                 # If enum -> select entity with options if present and writable
-                if it == 'e' and enum and mi:
+                if (it == 'e' and enum and mi) and not self.read_only:
                     t3, p3 = select_config(self.discovery_prefix, self.base_topic, self.base_url, page, ent['id'], label, enum)
                     self.mqtt.publish(t3, json.dumps(p3), retain=True)
                     self.mqtt.subscribe(topics(self.base_topic, self.base_url, page, ent['id'])["command"])
@@ -206,6 +244,9 @@ class BenekovMQTT:
 
     def on_message(self, client, userdata, msg):
         # Command handler for number/select writes
+        if self.read_only:
+            # Ignore commands in monitor profile
+            return
         topic = msg.topic
         payload = msg.payload.decode('utf-8').strip()
         for key, ent in self.entities.items():

@@ -16,20 +16,27 @@ password: "SBTAdmin!"
 poll_interval: 30
 base_topic: benekov
 discovery_prefix: homeassistant
+profile: monitor   # monitor|all; monitor = read-only + whitelist
 include_pages:
-  - HMI00001.cgi
-  - HMI00016.cgi
-  - HMI00039.cgi
-  - HMI00012.cgi
-  - HMI00014.cgi
-  - HMI00038.cgi
-  - HMI00052.cgi
+  - HMI00001.cgi    # výkon/teploty/palivo/stav
+  - HMI65000.cgi    # alarmy
+  - HMI00033.cgi    # podávání/ventilátor
 mqtt:
   host: core-mosquitto
   port: 1883
   username:
   password:
 ```
+
+### Monitor profile (default)
+- Publikuje pouze provozní metriky (read-only):
+  - Aktuální výkon (%), B2/B7/B8 teploty (°C), Stav kotle, Palivo
+  - Alarmy (aktivní), Alarmy (historie), Alarm ID
+  - Čas podávání (s), Výkon ventilátoru (%), Doběh ventilátoru (s)
+- Nezakládá ovládací `number/select` entity.
+
+### All profile
+- Publikuje všechny položky a založí ovládací `number/select` (kde je `mi`).
 
 ## Topics
 - State: `benekov/<host>/<page>/<oNNN>/state`
@@ -48,4 +55,3 @@ docker build -t benekov-mqtt addon/benekov-mqtt
 ## Home Assistant (Supervisor)
 - Add this repo as a local add-on repository or copy `addon/benekov-mqtt` under your local add-ons share.
 - Install "Benekov MQTT Bridge", configure options, start.
-
